@@ -92,17 +92,15 @@ int main(int argc, char * argv[]) {
 
     int sock;
     unsigned int len;
-    char ip[20];
     int port;
     struct sockaddr_in addr;
     int i;
     int k;
 
-    if (argc < 3) {
-        printf("Usage: ./server ip port\n");
+    if (argc < 2) {
+        printf("Usage: ./server port\n");
         return 1;
     } else {
-        strcpy(ip, argv[1]);
         sscanf(argv[2], "%d", &port);
     }
 
@@ -113,7 +111,7 @@ int main(int argc, char * argv[]) {
     }
 
     addr.sin_addr.s_addr = INADDR_ANY;
-    addr.sin_port = htons (port);
+    addr.sin_port = htons(port);
     addr.sin_family = AF_INET;
 
     if (bind(rsock, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
@@ -132,7 +130,7 @@ int main(int argc, char * argv[]) {
 
     signal(SIGINT, signal_handler);
 
-    while(1) {
+    while (1) {
         printf("[SERVER] Server started.\n");
         sock = accept(rsock, (struct sockaddr *) &addr, &len);
 
