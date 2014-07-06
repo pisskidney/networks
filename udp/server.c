@@ -17,24 +17,68 @@ pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
 struct thrarg {
     int sock;
     int index;
+    char buf[1024];
+    struct sockaddr_in addr;
 };
+
+int findFreeThread() {
+    int i;
+
+    pthread_mutex_lock(&mtx);
+    for(i=0; i<100; i++) {
+        if(threads[i] == NULL) {
+            pthread_mutex_unlock(&mtx);
+            return i;
+        }
+    }
+    pthread_mutex_unlock(&mtx);
+
+    return -1;
+};
+
+void serve(struct thrarg* arg) {
+
+    char buf[16];
+
+    printf("[SERVER] Received %s from client!\n", arg->buf);
+    fflush(stdout);
+
+    FILE *fp;
+    fp=fopen(buf, "rb");
+    
+    if (!fp) {
+        printf("[SERVER] No such file or file can't be opened!\n");
+    } else {
+        while (fread(buf, sizeof(buf), 1, fp) == 1) {
+            sendto(
+                arg->sock, buf, sizeof(buf), 0,
+                (struct sockaddr *) &arg->addr, sizeof(arg->addr)
+            );
+        }
+    }
+
+    pthread_mutex_lock(&mtx);
+    free(threads[arg->index]);
+    threads[arg->index] = NULL;
+    close(arg->sock);
+    free(arg);
+    pthread_mutex_unlock(&mtx);
+}
 
 int main(int argc, char * argv[]) {
 
     int i;
     int k;
     int port;
-    char ip[20];
     struct sockaddr_in addr;
     unsigned int len;
     char buf[1024];
 
-    if (argc < 3) {
-        printf("Usage: ./server ip port\n");
+    if (argc < 2) {
+        printf("Usage: ./server port\n");
         return 1;
     } else {
-        strcpy(ip, argv[1]);
-        sscanf(argv[2], "%d", &port);
+        sscanf(argv[1], "%d", &port);
     }
 
     rsock = socket(AF_INET, SOCK_DGRAM, 0);
@@ -57,17 +101,33 @@ int main(int argc, char * argv[]) {
         threads[i] = NULL;
     }
 
+    printf("[SERVER] Server started.\n");
+
     while (1) {
-        printf("[SERVER] Server started.\n");
-        k = recvfrom(rsock, buf, 1024, 0, (struct sockaddr *)&addr, &len);
-        printf("[SERVER] Received %s from client!", buf);
+        recvfrom(rsock, buf, 1024, 0, (struct sockaddr *) &addr, &len);
 
+        k = findFreeThread();
+        if(k < 0) {
+            continue;
+        }
 
+        struct thrarg* ta = (struct thrarg*)malloc(sizeof(struct thrarg));
+        ta->sock = rsock;
+        ta->index = k;
+        ta->addr = addr;
+        strcpy(ta->buf, buf);
 
+        threads[k] = (pthread_t*)malloc(sizeof(pthread_t));
 
+        pthread_create(threads[k], NULL, (void *(*)(void*))serve, ta);
     }
 
-
+    for(i=0; i<100; i++) {
+        pthread_t* t = threads[i];
+        if(t != NULL) {
+            pthread_join(*t, NULL);
+        }
+    }
 
 return 0;
 }
