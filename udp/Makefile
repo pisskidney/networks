@@ -1,4 +1,4 @@
-PORT=2222
+PORT=1337
 
 all:
 	gcc -Wall -o client client.c
