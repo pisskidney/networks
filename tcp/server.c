@@ -147,7 +147,6 @@ int main(int argc, char * argv[]) {
         ta->index = k;
         threads[k] = (pthread_t*)malloc(sizeof(pthread_t));
 
-
         pthread_create(threads[k], NULL, (void *(*)(void*))serve, ta);
     }
 
