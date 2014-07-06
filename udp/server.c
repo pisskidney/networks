@@ -38,13 +38,13 @@ int findFreeThread() {
 
 void serve(struct thrarg* arg) {
 
-    char buf[16];
+    char buf[1024];
 
     printf("[SERVER] Received %s from client!\n", arg->buf);
     fflush(stdout);
 
     FILE *fp;
-    fp=fopen(buf, "rb");
+    fp = fopen(arg->buf, "rb");
     
     if (!fp) {
         printf("[SERVER] No such file or file can't be opened!\n");
@@ -57,10 +57,11 @@ void serve(struct thrarg* arg) {
         }
     }
 
+    printf("[SERVER] Worker #%d terminated.\n", arg->index); 
+
     pthread_mutex_lock(&mtx);
     free(threads[arg->index]);
     threads[arg->index] = NULL;
-    close(arg->sock);
     free(arg);
     pthread_mutex_unlock(&mtx);
 }
@@ -69,6 +70,7 @@ int main(int argc, char * argv[]) {
 
     int i;
     int k;
+    int n;
     int port;
     struct sockaddr_in addr;
     unsigned int len;
@@ -104,11 +106,16 @@ int main(int argc, char * argv[]) {
     printf("[SERVER] Server started.\n");
 
     while (1) {
-        recvfrom(rsock, buf, 1024, 0, (struct sockaddr *) &addr, &len);
+        n = recvfrom(rsock, buf, sizeof(buf), 0, (struct sockaddr *) &addr, &len);
+
+        if (n <=0 ) {
+            continue;
+        }
 
         k = findFreeThread();
         if(k < 0) {
-            continue;
+            printf("[SERVER] All workers are full!\n");
+            return 7;
         }
 
         struct thrarg* ta = (struct thrarg*)malloc(sizeof(struct thrarg));
@@ -116,10 +123,10 @@ int main(int argc, char * argv[]) {
         ta->index = k;
         ta->addr = addr;
         strcpy(ta->buf, buf);
-
         threads[k] = (pthread_t*)malloc(sizeof(pthread_t));
 
         pthread_create(threads[k], NULL, (void *(*)(void*))serve, ta);
+        sleep(1);
     }
 
     for(i=0; i<100; i++) {
@@ -129,5 +136,7 @@ int main(int argc, char * argv[]) {
         }
     }
 
-return 0;
+    close(rsock);
+
+    return 0;
 }

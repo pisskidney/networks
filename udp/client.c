@@ -41,14 +41,28 @@ int main(int argc, char * argv[]) {
     printf("[CLIENT] Trying to send something to server...\n");
 
     strcpy(buf, "img.jpg");
+    buf[strlen(buf)] = 0;
+
     sendto(
         sock, buf, strlen(buf), 0,
         (struct sockaddr *) &addr, sizeof(addr)
     );
 
-    while((n = recvfrom(sock, buf, 10000, 0, NULL, NULL)) != 0) {
+    char filename[1024];
+    strcpy(filename, "new_");
+    strcat(filename, buf);
+    FILE *fp;
+    fp = fopen(filename, "wb");
+    while((n = recvfrom(sock, buf, sizeof(buf), 0, NULL, NULL)) > 0) {
         printf("[CLIENT] Received %d bytes from server!", n);
+        fflush(stdout);
+        fwrite(buf, n, 0, fp);
     }
+
+    printf("[CLIENT] Terminated.\n");
+    fflush(stdout);
+
+    close(sock);
 
     return 0;
 }
