@@ -101,7 +101,7 @@ int main(int argc, char * argv[]) {
         printf("Usage: ./server port\n");
         return 1;
     } else {
-        sscanf(argv[2], "%d", &port);
+        sscanf(argv[1], "%d", &port);
     }
 
     rsock = socket(AF_INET, SOCK_STREAM, 0);
